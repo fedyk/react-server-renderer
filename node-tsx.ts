@@ -61,7 +61,7 @@ export type Node =
   | boolean
   | Node[];
 
-const Fragment = Symbol('Fragment');
+const Fragment = Symbol("Fragment");
 
 const selfClosingTags = new Set([
   "area", "base", "img", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"
@@ -171,51 +171,68 @@ function buildEmptyElement(): EmptyElement {
   return { type: ElementTypes.Empty };
 }
 
-function render($element: Element): string {
-  if ($element.type === ElementTypes.Fragment) {
+function render(element: Element): string {
+  if (element.type === ElementTypes.Fragment) {
     let result = ""
 
-    for (const children of $element.children) {
+    for (const children of element.children) {
       result += render(children)
     }
 
     return result
   }
 
-  if ($element.type === ElementTypes.Empty) {
+  if (element.type === ElementTypes.Empty) {
     return ``
   }
 
-  if ($element?.type === ElementTypes.Text) {
-    return $element.value
+  if (element?.type === ElementTypes.Text) {
+    return escape(element.value)
   }
 
-  if ($element?.type === ElementTypes.Tag) {
-    let el = `<${$element.tag}`
-    const attrs = setAttributes($element.props)
+  if (element?.type === ElementTypes.Tag) {
+    let el = `<${element.tag}`
+    let attrs = ""
+    let name: string
+    let value: string
 
-    if (attrs) {
-      el += " " + attrs
+    Object.entries(element.props).forEach(function(entry) {
+      name = String(entry[0])
+      value = String(entry[1] || "")
+
+      if (name === "className") {
+        name = "class"
+      }
+
+      if (value.length === 0) {
+        return
+      }
+
+      attrs += `${escape(name)}="${escape(value)}" `
+    })
+
+    if (attrs.length > 0) {
+      el += " " + attrs.trim()
     }
 
-    if (selfClosingTags.has($element.tag)) {
+    if (selfClosingTags.has(element.tag)) {
       return el + "/>"
     }
 
     el += ">"
 
-    for (let children of $element.children) {
+    for (let children of element.children) {
       el += render(children)
     }
 
-    el += `</${$element.tag}>`
+    el += `</${element.tag}>`
 
     return el
   }
 
-  if ($element.type === ElementTypes.Component) {
-    return render($element.Component(Object.assign({}, $element.props, {
-      children: $element.children
+  if (element.type === ElementTypes.Component) {
+    return render(element.Component(Object.assign({}, element.props, {
+      children: element.children
     })))
 
   }
@@ -223,27 +240,18 @@ function render($element: Element): string {
   return ""
 }
 
-function setAttributes(props: Props): string {
-  let attrs = ""
-  const entries = Object.entries(props)
-
-  for (const entry of entries) {
-    attrs += setAttribute(entry[0], entry[1]) + " "
-  }
-
-  return attrs.trim()
+const escapeMap: Record<string, string> = {
+  "&": "&amp;",
+  "\"": "&quot;",
+  "\'": "&apos;",
+  "<": "&lt;",
+  ">": "&gt;"
 }
 
-function setAttribute(attr: string, value: unknown): string {
-  if (attr === 'className') {
-    return `class="${value}"`
-  }
-
-  if (attr === "innerHTML") {
-    return ""
-  }
-
-  return `${attr}="${value}"`
+function escape(str: string) {
+  return str.replace(/[&"'<>]/g, function (char) {
+    return escapeMap[char]
+  })
 }
 
 export default {
