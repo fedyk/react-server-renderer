@@ -171,12 +171,13 @@ function buildEmptyElement(): EmptyElement {
   return { type: ElementTypes.Empty };
 }
 
-function render(element: Element): string {
+function renderToStaticMarkup(element: Element): string {
   if (element.type === ElementTypes.Fragment) {
     let result = ""
+    let i: number
 
-    for (const children of element.children) {
-      result += render(children)
+    for (i = 0; i < element.children.length; i++) {
+      result += renderToStaticMarkup(element.children[i])
     }
 
     return result
@@ -196,20 +197,17 @@ function render(element: Element): string {
     let name: string
     let value: string
 
-    Object.entries(element.props).forEach(function(entry) {
-      name = String(entry[0])
-      value = String(entry[1] || "")
+    for (name in element.props) {
+      if (Object.hasOwn(element.props, name)) {
+        value = String(element.props[name] || "")
 
-      if (name === "className") {
-        name = "class"
+        if (name === "className") {
+          name = "class"
+        }
+
+        attrs += `${escape(name)}="${escape(value)}" `
       }
-
-      if (value.length === 0) {
-        return
-      }
-
-      attrs += `${escape(name)}="${escape(value)}" `
-    })
+    }
 
     if (attrs.length > 0) {
       el += " " + attrs.trim()
@@ -221,8 +219,10 @@ function render(element: Element): string {
 
     el += ">"
 
-    for (let children of element.children) {
-      el += render(children)
+    let i: number
+
+    for (i = 0; i < element.children.length; i++) {
+      el += renderToStaticMarkup(element.children[i])
     }
 
     el += `</${element.tag}>`
@@ -231,7 +231,7 @@ function render(element: Element): string {
   }
 
   if (element.type === ElementTypes.Component) {
-    return render(element.Component(Object.assign({}, element.props, {
+    return renderToStaticMarkup(element.Component(Object.assign({}, element.props, {
       children: element.children
     })))
 
@@ -257,5 +257,5 @@ function escape(str: string) {
 export default {
   createElement,
   Fragment,
-  render
+  renderToStaticMarkup
 }
