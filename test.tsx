@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import React from "./node-tsx.js"
+import React from "./react-server-renderer.js"
 
 assert.equal(React.render(<>Hello</>), "Hello")
 
